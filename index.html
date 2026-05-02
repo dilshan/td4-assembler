@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TD4 4-bit CPU Assembler</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --panel: #0f1628;
+      --panel2: #111c35;
+      --border: #1e3a6e;
+      --accent: #1565c0;
+      --accent2: #1976d2;
+      --accent3: #42a5f5;
+      --glow: #1e88e5;
+      --text: #cfd8dc;
+      --text-dim: #546e7a;
+      --text-bright: #e3f2fd;
+      --green: #00e676;
+      --red: #ff1744;
+      --switch-on: #1565c0;
+      --switch-off: #1a2744;
+      --switch-body: #0d47a1;
+      --white: #f5f5f5;
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-display: 'Orbitron', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse at 20% 10%, rgba(21, 101, 192, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 90%, rgba(25, 118, 210, 0.06) 0%, transparent 60%),
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(30, 58, 110, 0.12) 39px, rgba(30, 58, 110, 0.12) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(30, 58, 110, 0.08) 39px, rgba(30, 58, 110, 0.08) 40px);
+    }
+
+    header {
+      padding: 24px 32px 20px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(13, 71, 161, 0.15) 0%, transparent 100%);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .cpu-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--accent);
+      border: 2px solid var(--accent3);
+      border-radius: 6px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 3px;
+      padding: 6px;
+      box-shadow: 0 0 18px rgba(66, 165, 245, 0.35);
+      flex-shrink: 0;
+    }
+
+    .cpu-dot {
+      background: var(--text-bright);
+      border-radius: 1px;
+      opacity: 0.8;
+    }
+
+    .header-text h1 {
+      font-family: var(--font-display);
+      font-size: clamp(14px, 3vw, 22px);
+      font-weight: 900;
+      color: var(--text-bright);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .header-text p {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 1.5px;
+      margin-top: 3px;
+      text-transform: uppercase;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* Editor. */
+    .editor-section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .section-header {
+      padding: 12px 18px;
+      background: var(--panel2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--accent3);
+      text-transform: uppercase;
+    }
+
+    .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: rgba(21, 101, 192, 0.25);
+      border: 1px solid var(--accent);
+      color: var(--accent3);
+      letter-spacing: 1px;
+    }
+
+    .editor-wrapper {
+      display: flex;
+      min-height: 240px;
+      position: relative;
+    }
+
+    .line-numbers {
+      position: sticky;
+      left: 0;
+      padding: 16px 12px 16px 16px;
+      text-align: right;
+      color: var(--text-dim);
+      font-size: 13px;
+      line-height: 22px;
+      user-select: none;
+      min-width: 44px;
+      border-right: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      white-space: pre;
+      pointer-events: none;
+      flex-shrink: 0;
+      /* height must match textarea. */
+      align-self: flex-start;
+    }
+
+    textarea#editor {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-bright);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 22px;
+      padding: 16px 16px;
+      resize: vertical;
+      min-height: 240px;
+      tab-size: 2;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow: auto;
+      caret-color: var(--accent3);
+    }
+
+    textarea#editor::placeholder {
+      color: var(--text-dim);
+    }
+
+    /* Instruction reference. */
+    .ref-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--accent3);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.2s;
+    }
+
+    .ref-toggle:hover {
+      background: rgba(21, 101, 192, 0.2);
+    }
+
+    .ref-table {
+      display: none;
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .ref-table.open {
+      display: block;
+    }
+
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 6px 20px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .ref-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .ref-mnem {
+      color: var(--accent3);
+      min-width: 100px;
+    }
+
+    .ref-op {
+      color: var(--text-dim);
+    }
+
+    /* Error message section. */
+    #error-box {
+      display: none;
+      background: rgba(255, 23, 68, 0.08);
+      border: 1px solid rgba(255, 23, 68, 0.4);
+      border-radius: 8px;
+      padding: 14px 18px;
+    }
+
+    #error-box.visible {
+      display: block;
+    }
+
+    #error-box h3 {
+      font-family: var(--font-display);
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--red);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .error-item {
+      font-size: 12px;
+      color: #ef9a9a;
+      margin-bottom: 4px;
+      padding-left: 12px;
+      border-left: 2px solid var(--red);
+      line-height: 1.5;
+    }
+
+    /* Output / DIP switches (Try to match the TD4 PCB components). */
+    .output-section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    #switches-container {
+      padding: 20px 16px 24px;
+    }
+
+    .empty-state {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .empty-state::before {
+      content: '◈';
+      display: block;
+      font-size: 28px;
+      margin-bottom: 12px;
+      opacity: 0.3;
+    }
+
+    /* Instruction rows. */
+    .instr-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(30, 58, 110, 0.4);
+      flex-wrap: wrap;
+    }
+
+    .instr-row:last-child {
+      border-bottom: none;
+    }
+
+    .instr-addr {
+      font-family: var(--font-display);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    .instr-mnem {
+      font-size: 12px;
+      color: var(--text-bright);
+      min-width: 140px;
+      white-space: nowrap;
+    }
+
+    /* DIP switch. */
+    .dip-switch {
+      display: flex;
+      gap: 0;
+      background: #0a1428;
+      border: 2px solid #0d47a1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      box-shadow: 0 0 12px rgba(13, 71, 161, 0.4), inset 0 1px 0 rgba(66, 165, 245, 0.1);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    /* Group separator between nibbles. */
+    .dip-switch::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 6px;
+      bottom: 6px;
+      width: 1px;
+      background: rgba(66, 165, 245, 0.2);
+      transform: translateX(-50%);
+    }
+
+    .switch-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      width: 28px;
+      padding: 0 2px;
+    }
+
+    .switch-slot:nth-child(4) {
+      margin-right: 2px;
+    }
+
+    .switch-slot:nth-child(5) {
+      margin-left: 2px;
+    }
+
+    .switch-label {
+      font-size: 8px;
+      color: var(--text-dim);
+      letter-spacing: 0;
+      font-family: var(--font-mono);
+      line-height: 1;
+    }
+
+    .switch-body {
+      width: 20px;
+      height: 40px;
+      background: linear-gradient(180deg, #0d47a1 0%, #0a3880 100%);
+      border: 1px solid #1565c0;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      position: relative;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+      cursor: default;
+      overflow: hidden;
+    }
+
+    .switch-track {
+      position: absolute;
+      left: 3px;
+      right: 3px;
+      top: 3px;
+      bottom: 3px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 2px;
+    }
+
+    .switch-knob {
+      position: absolute;
+      left: 3px;
+      right: 3px;
+      height: 16px;
+      background: var(--white);
+      border-radius: 2px;
+      transition: top 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .switch-knob::after {
+      content: '';
+      position: absolute;
+      left: 3px;
+      right: 3px;
+      top: 50%;
+      height: 1px;
+      background: rgba(0, 0, 0, 0.15);
+      transform: translateY(-50%);
+    }
+
+    /* ON = top, OFF = bottom. */
+    .switch-body.sw-on .switch-knob {
+      top: 3px;
+    }
+
+    .switch-body.sw-off .switch-knob {
+      top: calc(100% - 19px);
+    }
+
+    .switch-body.sw-on {
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 8px rgba(66, 165, 245, 0.5);
+      border-color: var(--accent3);
+    }
+
+    .switch-pos-label {
+      font-size: 8px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      line-height: 1;
+    }
+
+    .sw-on-label,
+    .sw-off-label {
+      position: absolute;
+      font-size: 6px;
+      font-family: var(--font-mono);
+      color: rgba(255, 255, 255, 0.35);
+      left: 50%;
+      transform: translateX(-50%);
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .sw-on-label {
+      top: 4px;
+    }
+
+    .sw-off-label {
+      bottom: 4px;
+    }
+
+    .bit-value {
+      font-size: 9px;
+      color: var(--accent3);
+      font-family: var(--font-mono);
+      line-height: 1;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .instr-row:hover .bit-value {
+      opacity: 1;
+    }
+
+    .instr-byte {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      white-space: nowrap;
+      padding: 2px 8px;
+      background: rgba(21, 101, 192, 0.1);
+      border-radius: 3px;
+      border: 1px solid rgba(30, 58, 110, 0.5);
+    }
+
+    .instr-byte .hi {
+      color: #64b5f6;
+    }
+
+    .instr-byte .lo {
+      color: #90caf9;
+    }
+
+    .nibble-labels {
+      display: flex;
+      gap: 0;
+      padding: 0 10px;
+      margin-bottom: 2px;
+      flex-shrink: 0;
+    }
+
+    .nibble-label-group {
+      display: flex;
+      width: 136px;
+      /* 4 x 28px + padding */
+    }
+
+    .nibble-label-group span {
+      font-size: 8px;
+      text-align: center;
+      width: 32px;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* Legend. */
+    .legend {
+      display: flex;
+      gap: 16px;
+      padding: 10px 18px;
+      border-top: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.15);
+      font-size: 10px;
+      color: var(--text-dim);
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+
+    .leg-on {
+      background: var(--white);
+      box-shadow: 0 0 4px rgba(66, 165, 245, 0.6);
+    }
+
+    .leg-off {
+      background: #0d47a1;
+      border: 1px solid #1565c0;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 16px;
+      }
+
+      main {
+        padding: 16px 12px 40px;
+      }
+
+      .instr-row {
+        gap: 8px;
+      }
+
+      .instr-mnem {
+        min-width: 100px;
+        font-size: 11px;
+      }
+
+      .switch-slot {
+        width: 22px;
+      }
+
+      .switch-body {
+        width: 16px;
+        height: 34px;
+      }
+
+      .switch-knob {
+        height: 13px;
+      }
+
+      .switch-body.sw-off .switch-knob {
+        top: calc(100% - 16px);
+      }
+
+      .dip-switch {
+        padding: 6px 8px;
+      }
+
+      .instr-byte {
+        font-size: 10px;
+      }
+    }
+
+    /* Footer. */
+    footer {
+      border-top: 1px solid var(--border);
+      background: linear-gradient(0deg, rgba(13, 71, 161, 0.1) 0%, transparent 100%);
+      padding: 20px 32px 24px;
+      margin-top: auto;
+    }
+
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .footer-callsign {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent3);
+      letter-spacing: 2px;
+      text-shadow: 0 0 12px rgba(66, 165, 245, 0.5);
+    }
+
+    .footer-sep {
+      color: var(--border);
+      font-size: 16px;
+    }
+
+    .footer-fullname {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text);
+      letter-spacing: 0.5px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .footer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      transition: color 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+
+    .footer-link:hover {
+      color: var(--accent3);
+      border-color: var(--accent2);
+      background: rgba(21, 101, 192, 0.15);
+      box-shadow: 0 0 10px rgba(66, 165, 245, 0.2);
+    }
+
+    .link-icon {
+      width: 15px;
+      height: 15px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .footer-link:hover .link-icon {
+      opacity: 1;
+    }
+
+    .footer-copy {
+      max-width: 1200px;
+      margin: 12px auto 0;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="cpu-icon">
+      <div class="cpu-dot"></div>
+      <div class="cpu-dot"></div>
+      <div class="cpu-dot"></div>
+      <div class="cpu-dot"></div>
+      <div class="cpu-dot" style="opacity:0.3"></div>
+      <div class="cpu-dot"></div>
+      <div class="cpu-dot"></div>
+      <div class="cpu-dot"></div>
+      <div class="cpu-dot"></div>
+    </div>
+    <div class="header-text">
+      <h1>TD4 CPU Assembler</h1>
+      <p>Online DIP switch programming utility</p>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Editor -->
+    <div class="editor-section">
+      <div class="section-header">
+        <span class="section-title">Assembly Source</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="badge" id="line-count">0 lines</span>
+          <button class="ref-toggle" onclick="toggleRef()">⌨ Instruction Set</button>
+        </div>
+      </div>
+      <div class="ref-table" id="ref-table">
+        <div class="ref-grid">
+          <div class="ref-row"><span class="ref-mnem">ADD A, Im</span><span class="ref-op">0000 xxxx</span></div>
+          <div class="ref-row"><span class="ref-mnem">MOV A, B</span><span class="ref-op">0001 0000</span></div>
+          <div class="ref-row"><span class="ref-mnem">IN A</span><span class="ref-op">0010 0000</span></div>
+          <div class="ref-row"><span class="ref-mnem">MOV A, Im</span><span class="ref-op">0011 xxxx</span></div>
+          <div class="ref-row"><span class="ref-mnem">MOV B, A</span><span class="ref-op">0100 0000</span></div>
+          <div class="ref-row"><span class="ref-mnem">ADD B, Im</span><span class="ref-op">0101 xxxx</span></div>
+          <div class="ref-row"><span class="ref-mnem">IN B</span><span class="ref-op">0110 0000</span></div>
+          <div class="ref-row"><span class="ref-mnem">MOV B, Im</span><span class="ref-op">0111 xxxx</span></div>
+          <div class="ref-row"><span class="ref-mnem">OUT B</span><span class="ref-op">1001 0000</span></div>
+          <div class="ref-row"><span class="ref-mnem">OUT Im</span><span class="ref-op">1011 xxxx</span></div>
+          <div class="ref-row"><span class="ref-mnem">JNC Im</span><span class="ref-op">1110 xxxx</span></div>
+          <div class="ref-row"><span class="ref-mnem">JMP Im</span><span class="ref-op">1111 xxxx</span></div>
+        </div>
+        <div style="margin-top:10px;font-size:10px;color:var(--text-dim)">
+          Im = 4-bit immediate (decimal 0–15 or binary 0000–1111) · DIP switch order: bit0 → bit7 (left to right)
+        </div>
+      </div>
+      <div class="editor-wrapper">
+        <div class="line-numbers" id="line-nums">1</div>
+        <textarea id="editor" spellcheck="false"
+          placeholder="; Enter TD4 assembly&#10;in b&#10;add b, 1&#10;out b&#10;jmp 0"></textarea>
+      </div>
+    </div>
+
+    <!-- Errors -->
+    <div id="error-box">
+      <h3>⚠ Assembly Errors</h3>
+      <div id="error-list"></div>
+    </div>
+
+    <!-- Output -->
+    <div class="output-section">
+      <div class="section-header">
+        <span class="section-title">DIP Switch ROM</span>
+        <span class="badge" id="instr-count">0 / 16 instructions</span>
+      </div>
+      <div id="switches-container">
+        <div class="empty-state">Enter assembly code above to generate DIP switch positions</div>
+      </div>
+      <div class="legend">
+        <span
+          style="font-family:var(--font-display);font-size:9px;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;margin-right:4px">Legend:</span>
+        <div class="legend-item">
+          <div class="legend-swatch leg-on"></div><span>ON (switch up = 1)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch leg-off"></div><span>OFF (switch down = 0)</span>
+        </div>
+        <div class="legend-item" style="margin-left:auto"><span style="color:var(--accent3)">Hover row to reveal bit
+            values</span></div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-name">
+        <span class="footer-callsign">4S6DRJ</span>
+        <span class="footer-sep">&middot;</span>
+        <span class="footer-fullname">Dilshan R Jayakody</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/dilshan/td4-assembler" target="_blank" rel="noopener" class="footer-link">
+          <svg class="link-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path
+              d="M12 2C6.477 2 2 6.484 2 12.021c0 4.428 2.865 8.184 6.839 9.504.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.605-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.004.07 1.532 1.032 1.532 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.847-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.2 22 16.447 22 12.021 22 6.484 17.523 2 12 2z" />
+          </svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+    <div class="footer-copy">
+      TD4 4-bit CPU Assembler.
+    </div>
+  </footer>
+
+  <script>
+    // Instruction set definition.
+    const INSTRUCTIONS = [
+      // mnemonic patterns, opcode nibble, operand type
+      { re: /^add\s+a\s*,\s*(.+)$/i, op: 0b0000, type: 'im4', name: 'ADD A, Im' },
+      { re: /^mov\s+a\s*,\s*b$/i, op: 0b0001, type: 'none', name: 'MOV A, B' },
+      { re: /^in\s+a$/i, op: 0b0010, type: 'none', name: 'IN A' },
+      { re: /^mov\s+a\s*,\s*(.+)$/i, op: 0b0011, type: 'im4', name: 'MOV A, Im' },
+      { re: /^mov\s+b\s*,\s*a$/i, op: 0b0100, type: 'none', name: 'MOV B, A' },
+      { re: /^add\s+b\s*,\s*(.+)$/i, op: 0b0101, type: 'im4', name: 'ADD B, Im' },
+      { re: /^in\s+b$/i, op: 0b0110, type: 'none', name: 'IN B' },
+      { re: /^mov\s+b\s*,\s*(.+)$/i, op: 0b0111, type: 'im4', name: 'MOV B, Im' },
+      { re: /^out\s+b$/i, op: 0b1001, type: 'none', name: 'OUT B' },
+      { re: /^out\s+(.+)$/i, op: 0b1011, type: 'im4', name: 'OUT Im' },
+      { re: /^jnc\s+(.+)$/i, op: 0b1110, type: 'im4', name: 'JNC Im' },
+      { re: /^jmp\s+(.+)$/i, op: 0b1111, type: 'im4', name: 'JMP Im' },
+    ];
+
+    function parseImmediate(s) {
+      s = s.trim();
+      if (/^0b[01]+$/i.test(s)) return { val: parseInt(s.slice(2), 2), ok: true };
+      if (/^[01]{4}$/.test(s)) return { val: parseInt(s, 2), ok: true };
+      if (/^\d+$/.test(s)) return { val: parseInt(s, 10), ok: true };
+      if (/^0x[0-9a-f]+$/i.test(s)) return { val: parseInt(s.slice(2), 16), ok: true };
+      return { ok: false };
+    }
+
+    function assemble(source) {
+      const lines = source.split('\n');
+      const instructions = [];
+      const errors = [];
+
+      let instrIndex = 0;
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].replace(/;.*$/, '').trim(); // strip comments
+        if (!line) continue;
+
+        if (instrIndex >= 16) {
+          errors.push({ line: i + 1, msg: `Line ${i + 1}: Program exceeds 16 instructions (TD4 ROM limit)` });
+          instrIndex++;
+          continue;
+        }
+
+        let matched = false;
+        for (const instr of INSTRUCTIONS) {
+          const m = line.match(instr.re);
+          if (!m) continue;
+          matched = true;
+
+          let imm = 0;
+          if (instr.type === 'im4') {
+            const p = parseImmediate(m[1]);
+            if (!p.ok) {
+              errors.push({ line: i + 1, msg: `Line ${i + 1}: Invalid immediate value "${m[1]}"` });
+              instrIndex++;
+              break;
+            }
+            if (p.val < 0 || p.val > 15) {
+              errors.push({ line: i + 1, msg: `Line ${i + 1}: Immediate value ${p.val} out of range (0–15)` });
+              instrIndex++;
+              break;
+            }
+            imm = p.val;
+          }
+
+          const byte = (instr.op << 4) | imm;
+          instructions.push({
+            addr: instrIndex,
+            byte,
+            mnem: instr.name.replace('Im', imm),
+            srcLine: i + 1,
+            raw: line
+          });
+          instrIndex++;
+          break;
+        }
+
+        if (!matched) {
+          errors.push({ line: i + 1, msg: `Line ${i + 1}: Unknown instruction "${line}"` });
+          instrIndex++;
+        }
+      }
+
+      return { instructions, errors };
+    }
+
+    function buildDipSwitch(byte) {
+      const div = document.createElement('div');
+      div.className = 'dip-switch';
+
+      for (let k = 0; k < 8; k++) {
+        const bit = (byte >> k) & 1;
+        const slot = document.createElement('div');
+        slot.className = 'switch-slot';
+
+        const topLabel = document.createElement('div');
+        topLabel.className = 'switch-label';
+        topLabel.textContent = k + 1;
+
+        const body = document.createElement('div');
+        body.className = 'switch-body ' + (bit ? 'sw-on' : 'sw-off');
+
+        const track = document.createElement('div');
+        track.className = 'switch-track';
+
+        const knob = document.createElement('div');
+        knob.className = 'switch-knob';
+
+        const onL = document.createElement('span');
+        onL.className = 'sw-on-label';
+        onL.textContent = 'ON';
+        const offL = document.createElement('span');
+        offL.className = 'sw-off-label';
+        offL.textContent = 'OF';
+
+        body.appendChild(track);
+        body.appendChild(knob);
+        body.appendChild(onL);
+        body.appendChild(offL);
+
+        const bitVal = document.createElement('div');
+        bitVal.className = 'bit-value';
+        bitVal.textContent = bit;
+
+        slot.appendChild(topLabel);
+        slot.appendChild(body);
+        slot.appendChild(bitVal);
+
+        div.appendChild(slot);
+      }
+      return div;
+    }
+
+    function formatByte(byte) {
+      const hi = (byte >> 4).toString(2).padStart(4, '0');
+      const lo = (byte & 0xF).toString(2).padStart(4, '0');
+      return `<span class="hi">${hi}</span> <span class="lo">${lo}</span>`;
+    }
+
+    function renderOutput(result) {
+      const container = document.getElementById('switches-container');
+      const instrCount = document.getElementById('instr-count');
+      container.innerHTML = '';
+
+      if (result.instructions.length === 0) {
+        container.innerHTML = '<div class="empty-state">Enter assembly code above to generate DIP switch positions</div>';
+        instrCount.textContent = '0 / 16 instructions';
+        return;
+      }
+
+      instrCount.textContent = `${result.instructions.length} / 16 instructions`;
+
+      result.instructions.forEach(instr => {
+        const row = document.createElement('div');
+        row.className = 'instr-row';
+
+        const addr = document.createElement('div');
+        addr.className = 'instr-addr';
+        addr.textContent = instr.addr.toString(16).toUpperCase().padStart(2, '0') + 'h';
+
+        const mnem = document.createElement('div');
+        mnem.className = 'instr-mnem';
+        mnem.textContent = instr.mnem;
+
+        const byteSpan = document.createElement('div');
+        byteSpan.className = 'instr-byte';
+        byteSpan.innerHTML = formatByte(instr.byte);
+
+        const dip = buildDipSwitch(instr.byte);
+
+        row.appendChild(addr);
+        row.appendChild(mnem);
+        row.appendChild(dip);
+        row.appendChild(byteSpan);
+
+        container.appendChild(row);
+      });
+    }
+
+    function renderErrors(errors) {
+      const box = document.getElementById('error-box');
+      const list = document.getElementById('error-list');
+      if (errors.length === 0) {
+        box.classList.remove('visible');
+        return;
+      }
+      box.classList.add('visible');
+      list.innerHTML = errors.map(e =>
+        `<div class="error-item">${e.msg}</div>`
+      ).join('');
+    }
+
+    function updateLineNumbers() {
+      const ta = document.getElementById('editor');
+      const ln = document.getElementById('line-nums');
+      const lines = ta.value.split('\n');
+      ln.textContent = lines.map((_, i) => i + 1).join('\n');
+      ln.style.height = ta.offsetHeight + 'px';
+      document.getElementById('line-count').textContent =
+        lines.filter(l => l.trim() && !l.trim().startsWith(';')).length + ' lines';
+    }
+
+    function syncScroll() {
+      const ta = document.getElementById('editor');
+      const ln = document.getElementById('line-nums');
+      ln.style.transform = 'translateY(' + (-ta.scrollTop) + 'px)';
+    }
+
+    function update() {
+      const src = document.getElementById('editor').value;
+      updateLineNumbers();
+      syncScroll();
+      const result = assemble(src);
+      renderErrors(result.errors);
+      renderOutput(result);
+    }
+
+    function toggleRef() {
+      document.getElementById('ref-table').classList.toggle('open');
+    }
+
+    const editor = document.getElementById('editor');
+    editor.addEventListener('scroll', syncScroll);
+    editor.addEventListener('input', update);
+    new ResizeObserver(() => { updateLineNumbers(); syncScroll(); }).observe(editor);
+
+    // Some example code...
+    document.getElementById('editor').value =
+      `; TD4 Echo input + count example
+in b
+add b, 1
+out b
+jmp 0`;
+
+    update();
+  </script>
+</body>
+
+</html>
