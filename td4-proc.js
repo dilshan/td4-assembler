@@ -17,10 +17,12 @@ const INSTRUCTIONS = [
 
 function parseImmediate(s) {
     s = s.trim();
+
     if (/^0b[01]+$/i.test(s)) return { val: parseInt(s.slice(2), 2), ok: true };
     if (/^[01]{4}$/.test(s)) return { val: parseInt(s, 2), ok: true };
     if (/^\d+$/.test(s)) return { val: parseInt(s, 10), ok: true };
     if (/^0x[0-9a-f]+$/i.test(s)) return { val: parseInt(s.slice(2), 16), ok: true };
+
     return { ok: false };
 }
 
@@ -41,6 +43,7 @@ function assemble(source) {
         }
 
         let matched = false;
+
         for (const instr of INSTRUCTIONS) {
             const m = line.match(instr.re);
             if (!m) continue;
@@ -133,6 +136,7 @@ function buildDipSwitch(byte) {
 function formatByte(byte) {
     const hi = (byte >> 4).toString(2).padStart(4, '0');
     const lo = (byte & 0xF).toString(2).padStart(4, '0');
+
     return `<span class="hi">${hi}</span> <span class="lo">${lo}</span>`;
 }
 
@@ -179,10 +183,12 @@ function renderOutput(result) {
 function renderErrors(errors) {
     const box = document.getElementById('error-box');
     const list = document.getElementById('error-list');
+
     if (errors.length === 0) {
         box.classList.remove('visible');
         return;
     }
+
     box.classList.add('visible');
     list.innerHTML = errors.map(e =>
         `<div class="error-item">${e.msg}</div>`
@@ -193,6 +199,7 @@ function updateLineNumbers() {
     const ta = document.getElementById('editor');
     const ln = document.getElementById('line-nums');
     const lines = ta.value.split('\n');
+
     ln.textContent = lines.map((_, i) => i + 1).join('\n');
     ln.style.height = ta.offsetHeight + 'px';
     document.getElementById('line-count').textContent =
@@ -202,14 +209,18 @@ function updateLineNumbers() {
 function syncScroll() {
     const ta = document.getElementById('editor');
     const ln = document.getElementById('line-nums');
+
     ln.style.transform = 'translateY(' + (-ta.scrollTop) + 'px)';
 }
 
 function update() {
     const src = document.getElementById('editor').value;
+
     updateLineNumbers();
     syncScroll();
+
     const result = assemble(src);
+    
     renderErrors(result.errors);
     renderOutput(result);
 }
